@@ -1,4 +1,4 @@
-# authn8-mcp
+# @authn8/mcp-server
 
 MCP server that provides AI agents access to Authn8 2FA codes via PAT authentication.
 
@@ -10,7 +10,7 @@ MCP server that provides AI agents access to Authn8 2FA codes via PAT authentica
 ## Quick Start
 
 ```bash
-npx authn8-mcp
+npx @authn8/mcp-server
 ```
 
 Set the `AUTHN8_API_KEY` environment variable to your PAT token.
@@ -35,7 +35,7 @@ Add to your Claude Desktop configuration file:
   "mcpServers": {
     "authn8": {
       "command": "npx",
-      "args": ["-y", "authn8-mcp"],
+      "args": ["-y", "@authn8/mcp-server"],
       "env": {
         "AUTHN8_API_KEY": "pat_your_token_here"
       }
@@ -53,7 +53,7 @@ Add to your Cursor MCP settings:
   "mcpServers": {
     "authn8": {
       "command": "npx",
-      "args": ["-y", "authn8-mcp"],
+      "args": ["-y", "@authn8/mcp-server"],
       "env": {
         "AUTHN8_API_KEY": "pat_your_token_here"
       }
