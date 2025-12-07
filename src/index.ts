@@ -19,10 +19,10 @@ function formatDate(isoDate: string): string {
 
 function displayStartupInfo(info: TokenInfo): void {
   console.error("Authn8 MCP Server");
-  console.error(`Business: ${info.business}`);
-  console.error(`Token: ${info.token_name}`);
-  console.error(`Accounts: ${info.account_count}`);
-  console.error(`Expires: ${formatDate(info.expires_at)}`);
+  console.error(`Business: ${info.businessName}`);
+  console.error(`Token: ${info.tokenName}`);
+  console.error(`Accounts: ${info.accountCount}`);
+  console.error(`Expires: ${formatDate(info.expiresAt)}`);
   console.error("");
 }
 

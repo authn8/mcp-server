@@ -3,24 +3,27 @@ const API_KEY = process.env.AUTHN8_API_KEY;
 const USER_AGENT = "authn8-mcp/1.0.0";
 
 export interface TokenInfo {
-  business: string;
-  token_name: string;
-  scoped_groups: string[];
-  account_count: number;
-  expires_at: string;
+  businessName: string;
+  tokenName: string;
+  scopedGroups: Array<{ id: string; name: string }>;
+  accountCount: number;
+  expiresAt: string;
 }
 
 export interface Account {
   id: string;
   name: string;
-  group: string;
-  issuer: string;
+  issuerDomain: string;
+}
+
+interface AccountsResponse {
+  accounts: Account[];
 }
 
 export interface OtpResponse {
-  account: string;
-  otp: string;
-  expires_in_seconds: number;
+  name: string;
+  code: string;
+  length: number;
 }
 
 class Authn8Error extends Error {
@@ -99,15 +102,15 @@ export async function listAccounts(): Promise<Account[]> {
     return accountsCache.accounts;
   }
 
-  const accounts = await apiRequest<Account[]>("/api/pat/accounts");
+  const response = await apiRequest<AccountsResponse>("/api/pat/accounts");
 
   // Update cache
   accountsCache = {
-    accounts,
+    accounts: response.accounts,
     timestamp: Date.now(),
   };
 
-  return accounts;
+  return response.accounts;
 }
 
 export async function getOtp(accountId: string): Promise<OtpResponse> {
@@ -123,12 +126,12 @@ export async function findAccountByName(
   const matches = accounts.filter(
     (acc) =>
       acc.name.toLowerCase().includes(lowerName) ||
-      acc.issuer.toLowerCase().includes(lowerName)
+      acc.issuerDomain.toLowerCase().includes(lowerName)
   );
 
   if (matches.length === 0) {
     throw new Authn8Error(
-      `No account found matching "${name}". Available accounts:\n${accounts.map((a) => `  - ${a.name} (${a.issuer})`).join("\n")}`
+      `No account found matching "${name}". Available accounts:\n${accounts.map((a) => `  - ${a.name} (${a.issuerDomain})`).join("\n")}`
     );
   }
 

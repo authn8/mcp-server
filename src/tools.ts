@@ -56,8 +56,7 @@ export async function handleListAccounts(): Promise<{
   const formatted = accounts.map((acc) => ({
     id: acc.id,
     name: acc.name,
-    group: acc.group,
-    issuer: acc.issuer,
+    issuer: acc.issuerDomain,
   }));
 
   return {
@@ -115,7 +114,7 @@ export async function handleGetOtp(args: {
         content: [
           {
             type: "text",
-            text: `Multiple accounts match "${account_name}". Please be more specific:\n${result.matches.map((a) => `  - ${a.name} (${a.issuer}) - ID: ${a.id}`).join("\n")}`,
+            text: `Multiple accounts match "${account_name}". Please be more specific:\n${result.matches.map((a) => `  - ${a.name} (${a.issuerDomain}) - ID: ${a.id}`).join("\n")}`,
           },
         ],
       };
@@ -134,8 +133,7 @@ export async function handleGetOtp(args: {
         text: JSON.stringify(
           {
             account: accountName,
-            otp: otp.otp,
-            expires_in_seconds: otp.expires_in_seconds,
+            code: otp.code,
           },
           null,
           2
@@ -156,11 +154,11 @@ export async function handleWhoami(): Promise<{
         type: "text",
         text: JSON.stringify(
           {
-            business: info.business,
-            token_name: info.token_name,
-            scoped_groups: info.scoped_groups,
-            account_count: info.account_count,
-            expires_at: info.expires_at,
+            business: info.businessName,
+            token_name: info.tokenName,
+            scoped_groups: info.scopedGroups.map((g) => g.name),
+            account_count: info.accountCount,
+            expires_at: info.expiresAt,
           },
           null,
           2
