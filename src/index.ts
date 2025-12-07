@@ -48,10 +48,12 @@ async function main(): Promise<void> {
   });
 
   // Register tools
-  server.tool(
+  server.registerTool(
     "list_accounts",
-    toolDefinitions.list_accounts.description,
-    toolDefinitions.list_accounts.inputSchema.shape,
+    {
+      description: toolDefinitions.list_accounts.description,
+      inputSchema: toolDefinitions.list_accounts.inputSchema,
+    },
     async () => {
       try {
         return await handleListAccounts();
@@ -68,10 +70,12 @@ async function main(): Promise<void> {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "get_otp",
-    toolDefinitions.get_otp.description,
-    toolDefinitions.get_otp.inputSchema.shape,
+    {
+      description: toolDefinitions.get_otp.description,
+      inputSchema: toolDefinitions.get_otp.inputSchema,
+    },
     async (args) => {
       try {
         return await handleGetOtp(args as { account_id?: string; account_name?: string });
@@ -88,10 +92,12 @@ async function main(): Promise<void> {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "whoami",
-    toolDefinitions.whoami.description,
-    toolDefinitions.whoami.inputSchema.shape,
+    {
+      description: toolDefinitions.whoami.description,
+      inputSchema: toolDefinitions.whoami.inputSchema,
+    },
     async () => {
       try {
         return await handleWhoami();
