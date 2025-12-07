@@ -44,6 +44,27 @@ Add to your Claude Desktop configuration file:
 }
 ```
 
+### Claude Code (CLI)
+
+Add to your Claude Code configuration file:
+
+**macOS:** `~/.claude.json`
+**Windows:** `%USERPROFILE%\.claude.json`
+
+```json
+{
+  "mcpServers": {
+    "authn8": {
+      "command": "npx",
+      "args": ["-y", "@authn8/mcp-server"],
+      "env": {
+        "AUTHN8_API_KEY": "pat_your_token_here"
+      }
+    }
+  }
+}
+```
+
 ### Cursor
 
 Add to your Cursor MCP settings:
@@ -81,8 +102,7 @@ Returns all 2FA accounts accessible to this token.
   {
     "id": "924c52a6-4457-4970-a39f-4dc620217683",
     "name": "AWS Production",
-    "group": "HR",
-    "issuer": "Amazon"
+    "issuer": "amazon.com"
   }
 ]
 ```
@@ -101,8 +121,7 @@ Provide either `account_id` or `account_name`. If multiple accounts match the na
 ```json
 {
   "account": "AWS Production",
-  "otp": "483920",
-  "expires_in_seconds": 18
+  "code": "483920"
 }
 ```
 
