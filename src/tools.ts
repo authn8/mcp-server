@@ -20,7 +20,6 @@ export const toolDefinitions = {
       "Generates a TOTP code for a specific account. You can provide either the account_id (UUID) or account_name (partial match supported). If multiple accounts match the name, you'll get a list of matches to be more specific.",
     inputSchema: z.object({
       account_id: z
-        .string()
         .uuid()
         .optional()
         .describe("UUID of the account"),
