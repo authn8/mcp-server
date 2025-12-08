@@ -13,7 +13,7 @@ export interface TokenInfo {
 export interface Account {
   id: string;
   name: string;
-  issuerDomain: string;
+  issuerDomain: string | null;
 }
 
 interface AccountsResponse {
@@ -125,13 +125,13 @@ export async function findAccountByName(
 
   const matches = accounts.filter(
     (acc) =>
-      acc.name.toLowerCase().includes(lowerName) ||
-      acc.issuerDomain.toLowerCase().includes(lowerName)
+      acc.name?.toLowerCase().includes(lowerName) ||
+      acc.issuerDomain?.toLowerCase().includes(lowerName)
   );
 
   if (matches.length === 0) {
     throw new Authn8Error(
-      `No account found matching "${name}". Available accounts:\n${accounts.map((a) => `  - ${a.name} (${a.issuerDomain})`).join("\n")}`
+      `No account found matching "${name}". Available accounts:\n${accounts.map((a) => `  - ${a.name} (${a.issuerDomain || "unknown"})`).join("\n")}`
     );
   }
 

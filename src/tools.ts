@@ -55,7 +55,7 @@ export async function handleListAccounts(): Promise<{
   const formatted = accounts.map((acc) => ({
     id: acc.id,
     name: acc.name,
-    issuer: acc.issuerDomain,
+    issuer: acc.issuerDomain || null,
   }));
 
   return {
@@ -113,7 +113,7 @@ export async function handleGetOtp(args: {
         content: [
           {
             type: "text",
-            text: `Multiple accounts match "${account_name}". Please be more specific:\n${result.matches.map((a) => `  - ${a.name} (${a.issuerDomain}) - ID: ${a.id}`).join("\n")}`,
+            text: `Multiple accounts match "${account_name}". Please be more specific:\n${result.matches.map((a) => `  - ${a.name} (${a.issuerDomain || "unknown"}) - ID: ${a.id}`).join("\n")}`,
           },
         ],
       };
