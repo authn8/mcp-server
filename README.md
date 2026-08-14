@@ -92,19 +92,24 @@ Add to your Cursor MCP settings:
 
 ## Available Tools
 
+All tools declare an output schema and return `structuredContent` alongside the
+text block, so clients get typed results without re-parsing JSON out of text.
+
 ### list_accounts
 
 Returns all 2FA accounts accessible to this token.
 
 **Example response:**
 ```json
-[
-  {
-    "id": "924c52a6-4457-4970-a39f-4dc620217683",
-    "name": "AWS Production",
-    "issuer": "amazon.com"
-  }
-]
+{
+  "accounts": [
+    {
+      "id": "924c52a6-4457-4970-a39f-4dc620217683",
+      "name": "AWS Production",
+      "issuerDomain": "amazon.com"
+    }
+  ]
+}
 ```
 
 ### get_otp
@@ -113,15 +118,33 @@ Generates a TOTP code for a specific account.
 
 **Parameters:**
 - `account_id` (string, optional) - UUID of the account
-- `account_name` (string, optional) - Name to search for (partial match)
+- `account_name` (string, optional) - Name or issuer domain to search for (case-insensitive partial match)
 
-Provide either `account_id` or `account_name`. If multiple accounts match the name, the tool returns a list of matches.
+Provide either `account_id` or `account_name`. If multiple accounts match the
+name, the tool returns them in `multipleMatches` so you can retry with an
+`account_id`.
 
 **Example response:**
 ```json
 {
-  "account": "AWS Production",
-  "code": "483920"
+  "name": "AWS Production",
+  "code": "483920",
+  "length": 6
+}
+```
+
+**Ambiguous match:**
+```json
+{
+  "error": "Multiple accounts match 'aws'. Please be more specific or use account_id.",
+  "length": 0,
+  "multipleMatches": [
+    {
+      "id": "924c52a6-4457-4970-a39f-4dc620217683",
+      "name": "AWS Production",
+      "issuerDomain": "amazon.com"
+    }
+  ]
 }
 ```
 
@@ -132,11 +155,13 @@ Returns information about the current token.
 **Example response:**
 ```json
 {
-  "business": "Bytecode Solutions",
-  "token_name": "MCP Server 2",
-  "scoped_groups": ["HR"],
-  "account_count": 1,
-  "expires_at": "2025-12-25T23:59:59Z"
+  "tokenName": "MCP Server 2",
+  "businessName": "Bytecode Solutions",
+  "scopedGroups": [
+    { "id": "cfeba14a-e990-49e8-b6e5-61d63f7d68c8", "name": "HR" }
+  ],
+  "expiresAt": "2025-12-25T23:59:59Z",
+  "accountCount": 1
 }
 ```
 

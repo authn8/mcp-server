@@ -1,6 +1,13 @@
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+const { version } = require("../package.json") as { version: string };
+
 const API_URL = process.env.AUTHN8_API_URL || "https://api.authn8.com";
 const API_KEY = process.env.AUTHN8_API_KEY;
-const USER_AGENT = "authn8-mcp/1.0.0";
+const USER_AGENT = `authn8-mcp/${version}`;
+
+export const PACKAGE_VERSION = version;
 
 export interface TokenInfo {
   businessName: string;
@@ -26,7 +33,7 @@ export interface OtpResponse {
   length: number;
 }
 
-class Authn8Error extends Error {
+export class Authn8Error extends Error {
   constructor(
     message: string,
     public statusCode?: number
@@ -37,7 +44,7 @@ class Authn8Error extends Error {
 }
 
 let accountsCache: { accounts: Account[]; timestamp: number } | null = null;
-const CACHE_TTL_MS = 60 * 1000; // 60 seconds
+const CACHE_TTL_MS = 60 * 1000;
 
 async function apiRequest<T>(
   endpoint: string,
@@ -96,15 +103,17 @@ export async function getTokenInfo(): Promise<TokenInfo> {
   return apiRequest<TokenInfo>("/api/pat/me");
 }
 
-export async function listAccounts(): Promise<Account[]> {
-  // Check cache
-  if (accountsCache && Date.now() - accountsCache.timestamp < CACHE_TTL_MS) {
+export async function listAccounts(forceRefresh = false): Promise<Account[]> {
+  if (
+    !forceRefresh &&
+    accountsCache &&
+    Date.now() - accountsCache.timestamp < CACHE_TTL_MS
+  ) {
     return accountsCache.accounts;
   }
 
   const response = await apiRequest<AccountsResponse>("/api/pat/accounts");
 
-  // Update cache
   accountsCache = {
     accounts: response.accounts,
     timestamp: Date.now(),
@@ -113,33 +122,35 @@ export async function listAccounts(): Promise<Account[]> {
   return response.accounts;
 }
 
+function servedFromCache(): boolean {
+  return (
+    accountsCache !== null && Date.now() - accountsCache.timestamp < CACHE_TTL_MS
+  );
+}
+
 export async function getOtp(accountId: string): Promise<OtpResponse> {
   return apiRequest<OtpResponse>(`/api/pat/otp/${accountId}`);
 }
 
-export async function findAccountByName(
-  name: string
-): Promise<{ account: Account } | { matches: Account[] }> {
-  const accounts = await listAccounts();
+function matchAccounts(accounts: Account[], name: string): Account[] {
   const lowerName = name.toLowerCase();
 
-  const matches = accounts.filter(
+  return accounts.filter(
     (acc) =>
       acc.name?.toLowerCase().includes(lowerName) ||
       acc.issuerDomain?.toLowerCase().includes(lowerName)
   );
+}
 
-  if (matches.length === 0) {
-    throw new Authn8Error(
-      `No account found matching "${name}". Available accounts:\n${accounts.map((a) => `  - ${a.name} (${a.issuerDomain || "unknown"})`).join("\n")}`
-    );
+export async function findAccountByName(name: string): Promise<Account[]> {
+  const accounts = await listAccounts();
+  const matches = matchAccounts(accounts, name);
+
+  if (matches.length > 0 || !servedFromCache()) {
+    return matches;
   }
 
-  if (matches.length === 1) {
-    return { account: matches[0] };
-  }
-
-  return { matches };
+  return matchAccounts(await listAccounts(true), name);
 }
 
 export async function validateToken(): Promise<TokenInfo> {

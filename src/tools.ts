@@ -4,165 +4,158 @@ import {
   listAccounts,
   getOtp,
   findAccountByName,
-  type TokenInfo,
-  type Account,
-  type OtpResponse,
 } from "./client.js";
+
+const accountShape = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  issuerDomain: z.string().nullable(),
+});
+
+const listAccountsOutput = z.object({
+  error: z.string().optional(),
+  accounts: z.array(accountShape).optional(),
+});
+
+const getOtpOutput = z.object({
+  error: z.string().optional(),
+  name: z.string().optional(),
+  code: z.string().optional(),
+  length: z.number().int(),
+  multipleMatches: z.array(accountShape).optional(),
+});
+
+const whoamiOutput = z.object({
+  error: z.string().optional(),
+  tokenName: z.string().optional(),
+  businessName: z.string().optional(),
+  scopedGroups: z
+    .array(z.object({ id: z.uuid(), name: z.string() }))
+    .optional(),
+  expiresAt: z.string().optional(),
+  accountCount: z.number().int(),
+});
 
 export const toolDefinitions = {
   list_accounts: {
     description:
-      "Returns all 2FA accounts accessible to this token. Use this to see what accounts are available before requesting an OTP code.",
+      "Returns all 2FA accounts accessible to this token. Use this to see what accounts are available before requesting an OTP code. Each account includes: id (UUID for get_otp), name, and issuerDomain. Returns an empty list if no accounts are accessible.",
     inputSchema: z.object({}),
+    outputSchema: listAccountsOutput,
   },
   get_otp: {
     description:
-      "Generates a TOTP code for a specific account. You can provide either the account_id (UUID) or account_name (partial match supported). If multiple accounts match the name, you'll get a list of matches to be more specific.",
+      "Generates a TOTP code for a specific account. REQUIRED: Provide either account_id OR account_name (at least one must be specified). Errors: Returns 'No account found' if the name doesn't match any account. Returns 'Multiple accounts match' with a list of matches in the 'multipleMatches' field if the name is ambiguous - use the returned account_id to retry.",
     inputSchema: z.object({
       account_id: z
         .uuid()
         .optional()
-        .describe("UUID of the account"),
+        .describe(
+          "UUID of the account. Use this for exact matching, especially after resolving ambiguous name matches."
+        ),
       account_name: z
         .string()
         .optional()
-        .describe("Name to search for (partial match)"),
+        .describe(
+          "Name or issuer domain to search for (case-insensitive partial match). If multiple accounts match, returns a list to choose from."
+        ),
     }),
+    outputSchema: getOtpOutput,
   },
   whoami: {
     description:
       "Returns information about the current token and what it has access to, including the business name, token name, scoped groups, account count, and expiration date.",
     inputSchema: z.object({}),
+    outputSchema: whoamiOutput,
   },
 };
 
-export async function handleListAccounts(): Promise<{
+type ToolResult = {
   content: Array<{ type: "text"; text: string }>;
-}> {
+  structuredContent: Record<string, unknown>;
+};
+
+function result(payload: Record<string, unknown>): ToolResult {
+  return {
+    content: [{ type: "text", text: JSON.stringify(payload, null, 2) }],
+    structuredContent: payload,
+  };
+}
+
+export async function handleListAccounts(): Promise<ToolResult> {
   const accounts = await listAccounts();
 
-  if (accounts.length === 0) {
-    return {
-      content: [
-        {
-          type: "text",
-          text: "No accounts are accessible with this token.",
-        },
-      ],
-    };
-  }
-
-  const formatted = accounts.map((acc) => ({
-    id: acc.id,
-    name: acc.name,
-    issuer: acc.issuerDomain || null,
-  }));
-
-  return {
-    content: [
-      {
-        type: "text",
-        text: JSON.stringify(formatted, null, 2),
-      },
-    ],
-  };
+  return result({
+    accounts: accounts.map((acc) => ({
+      id: acc.id,
+      name: acc.name,
+      issuerDomain: acc.issuerDomain ?? null,
+    })),
+  });
 }
 
 export async function handleGetOtp(args: {
   account_id?: string;
   account_name?: string;
-}): Promise<{ content: Array<{ type: "text"; text: string }> }> {
+}): Promise<ToolResult> {
   const { account_id, account_name } = args;
 
   if (!account_id && !account_name) {
-    return {
-      content: [
-        {
-          type: "text",
-          text: "Error: Either account_id or account_name must be provided.",
-        },
-      ],
-    };
+    return result({
+      error: "Either account_id or account_name must be provided",
+      length: 0,
+    });
   }
 
   let targetAccountId: string;
-  let accountName: string;
 
   if (account_id) {
     targetAccountId = account_id;
-    // Get the account name for the response
-    const accounts = await listAccounts();
-    const account = accounts.find((a) => a.id === account_id);
-    if (!account) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Error: Account with ID "${account_id}" not found. Use list_accounts to see available accounts.`,
-          },
-        ],
-      };
-    }
-    accountName = account.name;
   } else {
-    // Search by name
-    const result = await findAccountByName(account_name!);
+    const matches = await findAccountByName(account_name!);
 
-    if ("matches" in result) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Multiple accounts match "${account_name}". Please be more specific:\n${result.matches.map((a) => `  - ${a.name} (${a.issuerDomain || "unknown"}) - ID: ${a.id}`).join("\n")}`,
-          },
-        ],
-      };
+    if (matches.length === 0) {
+      return result({
+        error: `No account found matching '${account_name}'. Use list_accounts to see available accounts.`,
+        length: 0,
+      });
     }
 
-    targetAccountId = result.account.id;
-    accountName = result.account.name;
+    if (matches.length > 1) {
+      return result({
+        error: `Multiple accounts match '${account_name}'. Please be more specific or use account_id.`,
+        length: 0,
+        multipleMatches: matches.map((a) => ({
+          id: a.id,
+          name: a.name,
+          issuerDomain: a.issuerDomain ?? null,
+        })),
+      });
+    }
+
+    targetAccountId = matches[0].id;
   }
 
   const otp = await getOtp(targetAccountId);
 
-  return {
-    content: [
-      {
-        type: "text",
-        text: JSON.stringify(
-          {
-            account: accountName,
-            code: otp.code,
-          },
-          null,
-          2
-        ),
-      },
-    ],
-  };
+  return result({
+    name: otp.name,
+    code: otp.code,
+    length: otp.length,
+  });
 }
 
-export async function handleWhoami(): Promise<{
-  content: Array<{ type: "text"; text: string }>;
-}> {
+export async function handleWhoami(): Promise<ToolResult> {
   const info = await getTokenInfo();
 
-  return {
-    content: [
-      {
-        type: "text",
-        text: JSON.stringify(
-          {
-            business: info.businessName,
-            token_name: info.tokenName,
-            scoped_groups: info.scopedGroups.map((g) => g.name),
-            account_count: info.accountCount,
-            expires_at: info.expiresAt,
-          },
-          null,
-          2
-        ),
-      },
-    ],
-  };
+  return result({
+    tokenName: info.tokenName,
+    businessName: info.businessName,
+    scopedGroups: (info.scopedGroups ?? []).map((g) => ({
+      id: g.id,
+      name: g.name,
+    })),
+    expiresAt: info.expiresAt,
+    accountCount: info.accountCount,
+  });
 }

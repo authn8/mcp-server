@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { validateToken, type TokenInfo } from "./client.js";
+import { validateToken, PACKAGE_VERSION, type TokenInfo } from "./client.js";
 import {
   toolDefinitions,
   handleListAccounts,
@@ -18,7 +18,7 @@ function formatDate(isoDate: string): string {
 }
 
 function displayStartupInfo(info: TokenInfo): void {
-  console.error("Authn8 MCP Server");
+  console.error(`Authn8 MCP Server v${PACKAGE_VERSION}`);
   console.error(`Business: ${info.businessName}`);
   console.error(`Token: ${info.tokenName}`);
   console.error(`Accounts: ${info.accountCount}`);
@@ -26,8 +26,19 @@ function displayStartupInfo(info: TokenInfo): void {
   console.error("");
 }
 
+function toErrorResult(error: unknown) {
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+      },
+    ],
+    isError: true,
+  };
+}
+
 async function main(): Promise<void> {
-  // Validate token on startup
   let tokenInfo: TokenInfo;
   try {
     tokenInfo = await validateToken();
@@ -41,31 +52,23 @@ async function main(): Promise<void> {
 
   displayStartupInfo(tokenInfo);
 
-  // Create MCP server
   const server = new McpServer({
     name: "authn8-mcp",
-    version: "1.0.0",
+    version: PACKAGE_VERSION,
   });
 
-  // Register tools
   server.registerTool(
     "list_accounts",
     {
       description: toolDefinitions.list_accounts.description,
       inputSchema: toolDefinitions.list_accounts.inputSchema,
+      outputSchema: toolDefinitions.list_accounts.outputSchema,
     },
     async () => {
       try {
         return await handleListAccounts();
       } catch (error) {
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          ],
-        };
+        return toErrorResult(error);
       }
     }
   );
@@ -75,19 +78,15 @@ async function main(): Promise<void> {
     {
       description: toolDefinitions.get_otp.description,
       inputSchema: toolDefinitions.get_otp.inputSchema,
+      outputSchema: toolDefinitions.get_otp.outputSchema,
     },
     async (args) => {
       try {
-        return await handleGetOtp(args as { account_id?: string; account_name?: string });
+        return await handleGetOtp(
+          args as { account_id?: string; account_name?: string }
+        );
       } catch (error) {
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          ],
-        };
+        return toErrorResult(error);
       }
     }
   );
@@ -97,24 +96,17 @@ async function main(): Promise<void> {
     {
       description: toolDefinitions.whoami.description,
       inputSchema: toolDefinitions.whoami.inputSchema,
+      outputSchema: toolDefinitions.whoami.outputSchema,
     },
     async () => {
       try {
         return await handleWhoami();
       } catch (error) {
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          ],
-        };
+        return toErrorResult(error);
       }
     }
   );
 
-  // Connect via stdio transport
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }
