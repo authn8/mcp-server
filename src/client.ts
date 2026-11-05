@@ -46,6 +46,33 @@ export class Authn8Error extends Error {
 let accountsCache: { accounts: Account[]; timestamp: number } | null = null;
 const CACHE_TTL_MS = 60 * 1000;
 
+async function readApiError(response: Response): Promise<string | null> {
+  try {
+    const body = (await response.json()) as {
+      errors?: unknown;
+      detail?: unknown;
+      title?: unknown;
+    };
+    if (Array.isArray(body.errors)) {
+      const messages = body.errors.filter(
+        (error): error is string => typeof error === "string" && error.length > 0
+      );
+      if (messages.length > 0) {
+        return messages.join(" ");
+      }
+    }
+    if (typeof body.detail === "string" && body.detail.length > 0) {
+      return body.detail;
+    }
+    if (typeof body.title === "string" && body.title.length > 0) {
+      return body.title;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 async function apiRequest<T>(
   endpoint: string,
   method: string = "GET"
@@ -70,9 +97,15 @@ async function apiRequest<T>(
   if (!response.ok) {
     if (response.status === 401) {
       throw new Authn8Error(
-        "Token is invalid or expired. Please check your token in the Authn8 dashboard.",
+        "Token is invalid, expired or revoked. Check it under Settings > MCP Tokens in Authn8.",
         401
       );
+    }
+    if (response.status !== 429) {
+      const apiMessage = await readApiError(response);
+      if (apiMessage) {
+        throw new Authn8Error(apiMessage, response.status);
+      }
     }
     if (response.status === 403) {
       throw new Authn8Error(
