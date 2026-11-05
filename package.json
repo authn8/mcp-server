@@ -1,6 +1,6 @@
 {
   "name": "@authn8/mcp-server",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "MCP server for Authn8 2FA code access",
   "mcpName": "io.github.authn8/mcp-server",
   "type": "module",

@@ -52,7 +52,7 @@ async function apiRequest<T>(
 ): Promise<T> {
   if (!API_KEY) {
     throw new Authn8Error(
-      "AUTHN8_API_KEY environment variable is not set. Please set it to your PAT token from the Authn8 dashboard."
+      "AUTHN8_API_KEY environment variable is not set. Set it to an MCP token from Settings > MCP Tokens in Authn8."
     );
   }
 
