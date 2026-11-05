@@ -1,7 +1,8 @@
 {
   "name": "@authn8/mcp-server",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "MCP server for Authn8 2FA code access",
+  "mcpName": "io.github.authn8/mcp-server",
   "type": "module",
   "bin": {
     "authn8-mcp": "dist/index.js"

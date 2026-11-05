@@ -1,0 +1,60 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.authn8/mcp-server",
+  "title": "Authn8",
+  "description": "Shared 2FA for teams: let AI agents get TOTP codes for the accounts your Authn8 token can see.",
+  "websiteUrl": "https://authn8.com",
+  "repository": {
+    "url": "https://github.com/authn8/mcp-server",
+    "source": "github"
+  },
+  "version": "1.1.1",
+  "icons": [
+    {
+      "src": "https://authn8.com/apple-touch-icon.png",
+      "mimeType": "image/png",
+      "sizes": ["180x180"]
+    }
+  ],
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@authn8/mcp-server",
+      "version": "1.1.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "AUTHN8_API_KEY",
+          "description": "An Authn8 MCP token (pat_...), created on the MCP Tokens page in Authn8",
+          "isRequired": true,
+          "isSecret": true,
+          "format": "string"
+        }
+      ]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://api.authn8.com/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Bearer followed by an Authn8 MCP token",
+          "isRequired": true,
+          "isSecret": true,
+          "value": "Bearer {authn8_api_key}",
+          "variables": {
+            "authn8_api_key": {
+              "description": "An Authn8 MCP token (pat_...), created on the MCP Tokens page in Authn8",
+              "isRequired": true,
+              "isSecret": true
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
